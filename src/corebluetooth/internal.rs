@@ -28,10 +28,16 @@ use objc2::{msg_send_id, ClassType};
 use objc2::{rc::Retained, runtime::AnyObject};
 use objc2_core_bluetooth::{
     CBCentralManager, CBCentralManagerScanOptionAllowDuplicatesKey, CBCharacteristic,
-    CBCharacteristicProperties, CBCharacteristicWriteType, CBDescriptor, CBManager,
-    CBManagerAuthorization, CBManagerState, CBPeripheral, CBPeripheralState, CBService, CBUUID,
+    CBCharacteristicProperties, CBCharacteristicWriteType,
+    CBConnectPeripheralOptionEnableAutoReconnect, CBConnectPeripheralOptionNotifyOnConnectionKey,
+    CBConnectPeripheralOptionNotifyOnDisconnectionKey,
+    CBConnectPeripheralOptionNotifyOnNotificationKey, CBConnectPeripheralOptionStartDelayKey,
+    CBDescriptor, CBManager, CBManagerAuthorization, CBManagerState, CBPeripheral,
+    CBPeripheralState, CBService, CBUUID,
 };
-use objc2_foundation::{NSArray, NSData, NSMutableDictionary, NSNumber, NSProcessInfo};
+use objc2_foundation::{
+    ns_string, NSArray, NSData, NSDictionary, NSMutableDictionary, NSNumber, NSProcessInfo,
+};
 use std::{
     collections::{BTreeSet, HashMap, VecDeque},
     ffi::CString,
@@ -488,9 +494,21 @@ impl CoreBluetoothInternal {
         let queue =
             unsafe { ffi::dispatch_queue_create(label.as_ptr(), ffi::DISPATCH_QUEUE_SERIAL) };
         let queue: *mut AnyObject = queue.cast();
-
-        let manager = unsafe {
-            msg_send_id![CBCentralManager::alloc(), initWithDelegate: &*delegate, queue: queue]
+        let mut options = NSMutableDictionary::new();
+        options.insert_id(
+            ns_string!("kCBOptionUsecase"),
+            Retained::into_super(Retained::into_super(Retained::into_super(
+                NSNumber::new_u32(23),
+            ))),
+        );
+        options.insert_id(
+            ns_string!("kCBOptionUseCase"),
+            Retained::into_super(Retained::into_super(Retained::into_super(
+                NSNumber::new_u32(23),
+            ))),
+        );
+        let manager: Retained<CBCentralManager> = unsafe {
+            msg_send_id![CBCentralManager::alloc(), initWithDelegate: &*delegate, queue: queue, options: &*options]
         };
 
         let process_info = unsafe { NSProcessInfo::processInfo() };
@@ -859,7 +877,49 @@ impl CoreBluetoothInternal {
         if let Some(p) = self.peripherals.get_mut(&peripheral_uuid) {
             trace!("Connecting peripheral!");
             p.connected_future_state = Some(fut);
-            unsafe { self.manager.connectPeripheral_options(&p.peripheral, None) };
+            let mut options = NSMutableDictionary::new();
+
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnConnectionKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnDisconnectionKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnNotificationKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionStartDelayKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_i32(2),
+                ))),
+            );
+            options.insert_id(
+                ns_string!("kCBOptionUsecase"),
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_u32(23),
+                ))),
+            );
+            options.insert_id(
+                ns_string!("kCBOptionUseCase"),
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_u32(23),
+                ))),
+            );
+
+            unsafe {
+                self.manager
+                    .connectPeripheral_options(&p.peripheral, Some(&options))
+            };
         }
     }
 
