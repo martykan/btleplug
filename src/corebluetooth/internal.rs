@@ -30,8 +30,14 @@ use objc2_core_bluetooth::{
     CBCentralManager, CBCentralManagerScanOptionAllowDuplicatesKey, CBCharacteristic,
     CBCharacteristicProperties, CBCharacteristicWriteType, CBDescriptor, CBManager,
     CBManagerAuthorization, CBManagerState, CBPeripheral, CBPeripheralState, CBService, CBUUID,
+    CBConnectPeripheralOptionNotifyOnConnectionKey,
+    CBConnectPeripheralOptionNotifyOnDisconnectionKey,
+    CBConnectPeripheralOptionNotifyOnNotificationKey,
+    CBConnectPeripheralOptionStartDelayKey,
+    CBCentralManagerOptionShowPowerAlertKey,
+    CBCentralManagerOptionRestoreIdentifierKey,
 };
-use objc2_foundation::{NSArray, NSData, NSMutableDictionary, NSNumber, NSProcessInfo};
+use objc2_foundation::{NSArray, NSData, NSMutableDictionary, NSNumber, NSProcessInfo, NSString};
 use std::{
     collections::{BTreeSet, HashMap, VecDeque},
     ffi::CString,
@@ -489,8 +495,24 @@ impl CoreBluetoothInternal {
             unsafe { ffi::dispatch_queue_create(label.as_ptr(), ffi::DISPATCH_QUEUE_SERIAL) };
         let queue: *mut AnyObject = queue.cast();
 
+        let mut options = NSMutableDictionary::new();
+        options.insert_id(
+            unsafe { CBCentralManagerOptionShowPowerAlertKey },
+            Retained::into_super(Retained::into_super(Retained::into_super(
+                NSNumber::new_bool(true),
+            ))),
+        );
+
+        // get app bundle identifier
+        // let bundle = NSBundle::mainBundle();
+        // let identifier = bundle.bundleIdentifier().unwrap_or_else(|| NSString::from_str("BtleplugCentralManager"));
+        options.insert_id(
+            unsafe { CBCentralManagerOptionRestoreIdentifierKey },
+            Retained::into_super(Retained::into_super(NSString::from_str("io.trezor.bluetoothCentralManager"))),
+        );
+
         let manager = unsafe {
-            msg_send_id![CBCentralManager::alloc(), initWithDelegate: &*delegate, queue: queue]
+            msg_send_id![CBCentralManager::alloc(), initWithDelegate: &*delegate, queue: queue, options: &*options]
         };
 
         let process_info = unsafe { NSProcessInfo::processInfo() };
@@ -859,7 +881,36 @@ impl CoreBluetoothInternal {
         if let Some(p) = self.peripherals.get_mut(&peripheral_uuid) {
             trace!("Connecting peripheral!");
             p.connected_future_state = Some(fut);
-            unsafe { self.manager.connectPeripheral_options(&p.peripheral, None) };
+
+            let mut options = NSMutableDictionary::new();
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnConnectionKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnDisconnectionKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionNotifyOnNotificationKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_bool(true),
+                ))),
+            );
+            options.insert_id(
+                unsafe { CBConnectPeripheralOptionStartDelayKey },
+                Retained::into_super(Retained::into_super(Retained::into_super(
+                    NSNumber::new_i32(5),
+                ))),
+            );
+
+            unsafe {
+                self.manager.connectPeripheral_options(&p.peripheral, Some(&options));
+            }
         }
     }
 
