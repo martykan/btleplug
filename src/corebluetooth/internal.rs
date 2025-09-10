@@ -904,7 +904,7 @@ impl CoreBluetoothInternal {
             options.insert_id(
                 unsafe { CBConnectPeripheralOptionStartDelayKey },
                 Retained::into_super(Retained::into_super(Retained::into_super(
-                    NSNumber::new_i32(5),
+                    NSNumber::new_i32(1),
                 ))),
             );
 
