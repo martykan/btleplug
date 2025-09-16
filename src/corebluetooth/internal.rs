@@ -27,15 +27,14 @@ use log::{error, trace, warn};
 use objc2::{msg_send_id, ClassType};
 use objc2::{rc::Retained, runtime::AnyObject};
 use objc2_core_bluetooth::{
-    CBCentralManager, CBCentralManagerScanOptionAllowDuplicatesKey, CBCharacteristic,
-    CBCharacteristicProperties, CBCharacteristicWriteType, CBDescriptor, CBManager,
-    CBManagerAuthorization, CBManagerState, CBPeripheral, CBPeripheralState, CBService, CBUUID,
+    CBCentralManager, CBCentralManagerOptionRestoreIdentifierKey,
+    CBCentralManagerOptionShowPowerAlertKey, CBCentralManagerScanOptionAllowDuplicatesKey,
+    CBCharacteristic, CBCharacteristicProperties, CBCharacteristicWriteType,
     CBConnectPeripheralOptionNotifyOnConnectionKey,
     CBConnectPeripheralOptionNotifyOnDisconnectionKey,
-    CBConnectPeripheralOptionNotifyOnNotificationKey,
-    CBConnectPeripheralOptionStartDelayKey,
-    CBCentralManagerOptionShowPowerAlertKey,
-    CBCentralManagerOptionRestoreIdentifierKey,
+    CBConnectPeripheralOptionNotifyOnNotificationKey, CBConnectPeripheralOptionStartDelayKey,
+    CBDescriptor, CBManager, CBManagerAuthorization, CBManagerState, CBPeripheral,
+    CBPeripheralState, CBService, CBUUID,
 };
 use objc2_foundation::{NSArray, NSData, NSMutableDictionary, NSNumber, NSProcessInfo, NSString};
 use std::{
@@ -506,10 +505,10 @@ impl CoreBluetoothInternal {
         // get app bundle identifier
         // let bundle = NSBundle::mainBundle();
         // let identifier = bundle.bundleIdentifier().unwrap_or_else(|| NSString::from_str("BtleplugCentralManager"));
-        options.insert_id(
-            unsafe { CBCentralManagerOptionRestoreIdentifierKey },
-            Retained::into_super(Retained::into_super(NSString::from_str("io.trezor.bluetoothCentralManager"))),
-        );
+        // options.insert_id(
+        //     unsafe { CBCentralManagerOptionRestoreIdentifierKey },
+        //     Retained::into_super(Retained::into_super(NSString::from_str("io.trezor.bluetoothCentralManager"))),
+        // );
 
         let manager = unsafe {
             msg_send_id![CBCentralManager::alloc(), initWithDelegate: &*delegate, queue: queue, options: &*options]
@@ -909,7 +908,8 @@ impl CoreBluetoothInternal {
             );
 
             unsafe {
-                self.manager.connectPeripheral_options(&p.peripheral, Some(&options));
+                self.manager
+                    .connectPeripheral_options(&p.peripheral, Some(&options));
             }
         }
     }
